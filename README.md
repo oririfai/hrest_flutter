@@ -1,49 +1,78 @@
-# hrest_flutter
+# HRest Flutter (hrest_flutter)
 
-A new Dart FFI package project.
+[Benchmark](https://github.com/oririfai/hrest-benchmark) | [Core](https://github.com/oririfai/hrest-core) | [CLI](https://github.com/oririfai/hrest-cli) | [Python](https://github.com/oririfai/hrest-py) | [Node](https://github.com/oririfai/hrest-node) | [Go](https://github.com/oririfai/hrest-go) | [TS](https://github.com/oririfai/hrest-ts)
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter
-[FFI package](https://flutter.dev/to/ffi-package),
-a specialized package that includes native code directly invoked with Dart FFI.
+> High-Performance Dart/Flutter Client SDK for the [HRest Binary Protocol](https://github.com/oririfai/hrest-core)
 
-## Project structure
+`hrest_flutter` is a highly optimized client SDK for Flutter and Dart. It leverages Dart FFI (Foreign Function Interface) to bind directly to the Rust-powered `hrest-core` engine, achieving zero-parsing overhead and massive bandwidth savings.
 
-This template uses the following structure:
+It includes a seamless `DioInterceptor` that automatically translates your standard JSON payloads into highly compressed HRest binary formats on the fly!
 
-* `src`: Contains the native source code, and a CmakeFile.txt file for building
-  that source code into a dynamic library.
+---
 
-* `lib`: Contains the Dart code that defines the API of the plugin, and which
-  calls into the native code using `dart:ffi`.
+## Installation
 
-* `bin`: Contains the `build.dart` that performs the external native builds.
+Add the dependency to your `pubspec.yaml`:
 
-## Building and bundling native code
+```yaml
+dependencies:
+  hrest_flutter: ^0.1.0
+  dio: ^5.11.0 # Required for the interceptor
+```
 
-`build.dart` does the building of native components.
+## Quick Start
 
-Bundling is done by Flutter based on the output from `build.dart`.
+### 1. Initialize the SDK
 
-## Binding to native code
+Load the SDK once at the root of your application. This initializes the native Rust engine and reads your generated HRest contract files.
 
-To use the native code, bindings in Dart are needed.
-To avoid writing these by hand, they are generated from the header file
-(`src/hrest_flutter.h`) by `package:ffigen`.
-Regenerate the bindings by running `dart run ffigen --config ffigen.yaml`.
+```dart
+import 'package:hrest_flutter/hrest_flutter.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
-## Invoking native code
+void main() async {
+  // Load generated contracts (from assets)
+  final reqJson = await rootBundle.loadString('assets/hrest-req-contract.json');
+  final resJson = await rootBundle.loadString('assets/hrest-res-contract.json');
+  
+  // Initialize the Stateful FFI Loader
+  final loader = HrestLoader(reqJson: reqJson, resJson: resJson);
+  
+  // Attach to Dio
+  final dio = Dio();
+  dio.interceptors.add(HrestDioInterceptor(loader: loader));
+  
+  runApp(MyApp(dio: dio));
+}
+```
 
-Very short-running native functions can be directly invoked from any isolate.
-For example, see `sum` in `lib/hrest_flutter.dart`.
+### 2. Make API Calls (Transparently)
 
-Longer-running functions should be invoked on a helper isolate to avoid
-dropping frames in Flutter applications.
-For example, see `sumAsync` in `lib/hrest_flutter.dart`.
+Use `Dio` exactly as you normally would. The `HrestDioInterceptor` will automatically intercept the request, encode the outgoing JSON into binary, and decode the incoming binary response back into a normal JSON Map.
 
-## Flutter help
+```dart
+Future<void> runTask(Dio dio) async {
+  // Just send a normal JSON map!
+  final response = await dio.post('/api/v1/run', data: {
+    "event": "click",
+    "headless": true,
+    "task_id": 42
+  });
 
-For help getting started with Flutter, view our
-[online documentation](https://docs.flutter.dev), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+  // The response is already decoded back to a JSON Map
+  print("Success: ${response.data}");
+}
+```
+
+## Architecture
+
+- **Stateful C-FFI**: Binds natively to `libhrest_core` using Dart `dart:ffi`. The JSON schemas are parsed only once into Rust's heap memory, completely eliminating parsing overhead on every request.
+- **Dio Integration**: Follows Clean Architecture by isolating the complex FFI logic inside a simple Presentation-layer Dio Interceptor.
+- **Extreme Performance**: HRest FFI is proven to be faster than native JSON parsers while cutting network bandwidth usage by **~50%**.
+
+## License
+
+MIT © 2026 HyperRest Project
