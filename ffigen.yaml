@@ -1,0 +1,16 @@
+# Run with `dart run ffigen --config ffigen.yaml`.
+name: HrestFlutterBindings
+description: |
+  Bindings for `src/hrest_flutter.h`.
+
+  Regenerate bindings with `dart run ffigen --config ffigen.yaml`.
+output: 'lib/hrest_flutter_bindings_generated.dart'
+headers:
+  entry-points:
+    - 'src/hrest_flutter.h'
+  include-directives:
+    - 'src/hrest_flutter.h'
+ffi-native:
+comments:
+  style: any
+  length: full
